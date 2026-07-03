@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: exam_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: examination_db
+      MYSQL_USER: exam_user
+      MYSQL_PASSWORD: exam_password
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: exam_backend
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/examination_db?useSSL=false&serverTimezone=UTC
+      SPRING_DATASOURCE_USERNAME: exam_user
+      SPRING_DATASOURCE_PASSWORD: exam_password
+    ports:
+      - "8080:8080"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  frontend:
+    image: node:16-alpine
+    container_name: exam_frontend
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+    command: npm start
+
+volumes:
+  mysql_data:
+
+networks:
+  default:
+    name: exam_network
